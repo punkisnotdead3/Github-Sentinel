@@ -51,11 +51,11 @@ class GitHubClient:
         ]
 
     def get_issues(self, owner: str, repo: str, days: int = 7, limit: int = 20) -> List[Dict]:
-        """获取近期 Issues"""
+        """获取近期已关闭的 Issues"""
         data = self._get(
             f"/repos/{owner}/{repo}/issues",
             params={
-                "state": "all",
+                "state": "closed",
                 "since": self._since_str(days),
                 "per_page": limit,
                 "sort": "updated",
@@ -77,11 +77,11 @@ class GitHubClient:
         ]
 
     def get_pull_requests(self, owner: str, repo: str, days: int = 7, limit: int = 20) -> List[Dict]:
-        """获取近期 Pull Requests"""
+        """获取近期已合并的 Pull Requests"""
         data = self._get(
             f"/repos/{owner}/{repo}/pulls",
             params={
-                "state": "all",
+                "state": "closed",
                 "sort": "updated",
                 "direction": "desc",
                 "per_page": limit,
@@ -93,6 +93,8 @@ class GitHubClient:
             updated = datetime.fromisoformat(pr["updated_at"].replace("Z", "+00:00"))
             if updated < cutoff:
                 break
+            if pr.get("merged_at") is None:  # 只保留已合并的，跳过直接关闭的
+                continue
             result.append({
                 "type": "pull_request",
                 "number": pr["number"],
@@ -102,7 +104,7 @@ class GitHubClient:
                 "created_at": pr["created_at"],
                 "updated_at": pr["updated_at"],
                 "user": pr["user"]["login"],
-                "merged": pr.get("merged_at") is not None,
+                "merged": True,
             })
         return result
 
