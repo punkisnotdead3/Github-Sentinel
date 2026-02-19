@@ -1,0 +1,17 @@
+github:
+  token: ""  # 在 .env 中设置 GITHUB_TOKEN
+
+llm:
+  provider: "anthropic"
+  model: "claude-opus-4-6"
+  max_tokens: 4096
+
+scheduler:
+  interval: "daily"   # daily 或 weekly
+  time: "08:00"       # 每天执行时间（24小时制）
+
+report:
+  output_dir: "reports"
+  format: "markdown"
+
+subscriptions_file: "config/subscriptions.json"

@@ -1,0 +1,10 @@
+{
+  "subscriptions": [
+    {
+      "owner": "anthropics",
+      "repo": "anthropic-sdk-python",
+      "label": "Anthropic Python SDK",
+      "track": ["releases", "issues", "pull_requests", "commits"]
+    }
+  ]
+}
