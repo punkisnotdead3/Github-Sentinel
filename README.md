@@ -1,4 +1,4 @@
-# GitHub Sentinel v0.0.2
+# GitHub Sentinel v0.0.3
 
 GitHub Sentinel 是一款开源的 AI Agent 工具，专为开发者和项目管理人员设计。它能够定期（每日/每周）自动获取并汇总订阅的 GitHub 仓库最新动态，通过 DeepSeek AI 生成结构化的中文摘要报告，帮助团队高效跟踪项目进展。
 
