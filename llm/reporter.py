@@ -1,6 +1,6 @@
 import json
 from typing import Dict, List
-import anthropic
+from openai import OpenAI
 
 
 SYSTEM_PROMPT = """你是一位专业的 GitHub 项目分析师。
@@ -64,10 +64,13 @@ def _build_user_prompt(updates: Dict) -> str:
 
 
 class LLMReporter:
-    """使用 Claude API 生成仓库更新摘要报告"""
+    """使用 DeepSeek API 生成仓库更新摘要报告"""
 
-    def __init__(self, api_key: str, model: str = "claude-opus-4-6", max_tokens: int = 4096):
-        self.client = anthropic.Anthropic(api_key=api_key)
+    def __init__(self, api_key: str, model: str = "deepseek-chat", max_tokens: int = 4096):
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.deepseek.com",
+        )
         self.model = model
         self.max_tokens = max_tokens
 
@@ -75,13 +78,15 @@ class LLMReporter:
         """为单个仓库的更新生成 AI 摘要"""
         user_prompt = _build_user_prompt(updates)
 
-        message = self.client.messages.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             max_tokens=self.max_tokens,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_prompt}],
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
         )
-        return message.content[0].text
+        return response.choices[0].message.content
 
     def generate_digest(self, all_updates: List[Dict]) -> str:
         """为多个仓库生成汇总 Digest 报告"""
