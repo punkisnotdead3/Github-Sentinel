@@ -1,6 +1,7 @@
 .env
 config/.env.example
 reports/
+logs/
 __pycache__/
 *.pyc
 *.pyo

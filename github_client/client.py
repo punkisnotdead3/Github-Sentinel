@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class GitHubClient:
@@ -18,6 +21,7 @@ class GitHubClient:
 
     def _get(self, path: str, params: dict = None) -> list | dict:
         url = f"{self.BASE_URL}{path}"
+        logger.debug("GitHub API GET %s params=%s", path, params)
         resp = self.session.get(url, params=params, timeout=30)
         resp.raise_for_status()
         return resp.json()
@@ -129,6 +133,8 @@ class GitHubClient:
         repo = subscription["repo"]
         track = subscription.get("track", ["releases", "issues", "pull_requests", "commits"])
 
+        logger.info("开始抓取 %s/%s | 跟踪类型: %s | 时间范围: 近 %d 天", owner, repo, track, days)
+
         updates = {
             "owner": owner,
             "repo": repo,
@@ -149,4 +155,5 @@ class GitHubClient:
         if "commits" in track:
             updates["items"].extend(self.get_commits(owner, repo, days=days))
 
+        logger.info("抓取完成 %s/%s | 共 %d 条更新", owner, repo, len(updates["items"]))
         return updates

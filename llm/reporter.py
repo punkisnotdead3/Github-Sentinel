@@ -1,7 +1,9 @@
 import json
+import logging
 from typing import Dict, List
 from openai import OpenAI
 
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """你是一位专业的 GitHub 项目分析师。
 你的任务是将 GitHub 仓库的原始更新数据整理成一份清晰、结构化的中文摘要报告。
@@ -76,7 +78,19 @@ class LLMReporter:
 
     def generate_report(self, updates: Dict) -> str:
         """为单个仓库的更新生成 AI 摘要"""
+        label = updates.get("label", f"{updates['owner']}/{updates['repo']}")
         user_prompt = _build_user_prompt(updates)
+
+        logger.info("开始调用 LLM | 仓库: %s | 模型: %s", label, self.model)
+        logger.debug(
+            "LLM system prompt:\n%s",
+            SYSTEM_PROMPT,
+        )
+        logger.debug(
+            "LLM user prompt | 仓库: %s\n%s",
+            label,
+            user_prompt,
+        )
 
         response = self.client.chat.completions.create(
             model=self.model,
@@ -86,6 +100,16 @@ class LLMReporter:
                 {"role": "user", "content": user_prompt},
             ],
         )
+
+        usage = response.usage
+        logger.info(
+            "LLM 调用完成 | 仓库: %s | prompt_tokens: %s | completion_tokens: %s | total_tokens: %s",
+            label,
+            usage.prompt_tokens,
+            usage.completion_tokens,
+            usage.total_tokens,
+        )
+
         return response.choices[0].message.content
 
     def generate_digest(self, all_updates: List[Dict]) -> str:

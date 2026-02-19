@@ -4,8 +4,10 @@ GitHub Sentinel - 交互式 REPL 入口
 """
 
 import logging
+import logging.handlers
 import re
 import threading
+from pathlib import Path
 
 from config import load_config
 from subscription import SubscriptionManager
@@ -14,10 +16,27 @@ from llm import LLMReporter
 from notifier import FileNotifier
 from scheduler import SentinelScheduler
 
-logging.basicConfig(
-    level=logging.ERROR,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+_LOG_DIR = Path(__file__).parent / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
+
+# 文件处理器：DEBUG 级别，最多保留 7 个滚动文件，每个最大 10MB
+_file_handler = logging.handlers.RotatingFileHandler(
+    _LOG_DIR / "sentinel.log",
+    maxBytes=10 * 1024 * 1024,
+    backupCount=7,
+    encoding="utf-8",
 )
+_file_handler.setLevel(logging.DEBUG)
+_file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+))
+
+# 控制台处理器：WARNING 级别，不干扰 REPL 交互输出
+_console_handler = logging.StreamHandler()
+_console_handler.setLevel(logging.WARNING)
+_console_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+
+logging.basicConfig(level=logging.DEBUG, handlers=[_file_handler, _console_handler])
 logger = logging.getLogger("sentinel")
 
 HELP_TEXT = """
