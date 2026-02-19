@@ -1,12 +1,12 @@
-# GitHub Sentinel
+# GitHub Sentinel v0.0.2
 
-GitHub Sentinel 是一款开源的 AI Agent 工具，专为开发者和项目管理人员设计。它能够定期（每日/每周）自动获取并汇总订阅的 GitHub 仓库最新动态，通过 Claude AI 生成结构化的中文摘要报告，帮助团队高效跟踪项目进展。
+GitHub Sentinel 是一款开源的 AI Agent 工具，专为开发者和项目管理人员设计。它能够定期（每日/每周）自动获取并汇总订阅的 GitHub 仓库最新动态，通过 DeepSeek AI 生成结构化的中文摘要报告，帮助团队高效跟踪项目进展。
 
 ## 功能特性
 
 - **订阅管理**：灵活添加、删除、查看订阅的 GitHub 仓库
 - **更新获取**：自动抓取 Releases、Issues、Pull Requests、Commits
-- **报告生成**：调用 Claude AI 对原始数据进行智能摘要，输出 Markdown 格式报告
+- **报告生成**：调用 DeepSeek AI 对原始数据进行智能摘要，输出 Markdown 格式报告
 - **通知系统**：将报告保存为本地文件，支持扩展为邮件/Webhook 推送
 - **定时调度**：支持每日或每周定时自动执行
 
@@ -14,7 +14,7 @@ GitHub Sentinel 是一款开源的 AI Agent 工具，专为开发者和项目管
 
 ```
 Github-Sentinel/
-├── main.py                    # 命令行入口
+├── main.py                    # 交互式 REPL 入口
 ├── requirements.txt           # Python 依赖
 ├── .gitignore
 ├── config/
@@ -30,7 +30,7 @@ Github-Sentinel/
 │   ├── client.py              # GitHub REST API 封装
 │   └── __init__.py
 ├── llm/
-│   ├── reporter.py            # Claude AI 报告生成
+│   ├── reporter.py            # DeepSeek AI 报告生成
 │   └── __init__.py
 ├── notifier/
 │   ├── file_notifier.py       # 本地 Markdown 文件输出
@@ -50,19 +50,15 @@ pip install -r requirements.txt
 
 ### 2. 配置密钥
 
-```bash
-cp config/.env.example .env
-```
-
-编辑 `.env` 文件，填入以下内容：
+在系统中设置以下环境变量：
 
 ```env
 GITHUB_TOKEN=your_github_token_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
 
 - **GITHUB_TOKEN**：在 [GitHub Settings → Tokens](https://github.com/settings/tokens) 创建，需要 `repo` 读取权限
-- **ANTHROPIC_API_KEY**：在 [Anthropic Console](https://console.anthropic.com/) 获取
+- **DEEPSEEK_API_KEY**：在 [DeepSeek 开放平台](https://platform.deepseek.com/) 获取
 
 ### 3. 修改配置（可选）
 
@@ -70,7 +66,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
 ```yaml
 llm:
-  model: "claude-opus-4-6"   # 使用的 Claude 模型
+  model: "deepseek-chat"     # 使用的 DeepSeek 模型
   max_tokens: 4096
 
 scheduler:
@@ -81,30 +77,46 @@ report:
   output_dir: "reports"      # 报告输出目录
 ```
 
-### 4. 管理订阅
+### 4. 启动交互式控制台
 
 ```bash
-# 查看当前订阅列表
-python main.py list
+python main.py
+```
 
-# 添加仓库订阅
-python main.py add microsoft/vscode
-python main.py add anthropics/anthropic-sdk-python
+进入 REPL 后，输入 `help` 查看所有可用命令：
+
+```
+>>> help
+
+可用命令：
+  run                  立即抓取所有订阅仓库并生成 AI 摘要报告
+  schedule             在后台启动定时调度（按 settings.yaml 中的时间执行）
+  list                 查看当前订阅列表
+  add <owner/repo>     添加仓库订阅，例如：add microsoft/vscode
+  remove <owner/repo>  移除仓库订阅，例如：remove microsoft/vscode
+  help                 显示帮助信息
+  exit / quit          退出程序
+```
+
+### 5. 常用操作示例
+
+```
+# 查看当前订阅列表
+>>> list
+
+# 添加仓库订阅（支持 owner/repo 或完整 GitHub URL）
+>>> add microsoft/vscode
+>>> add https://github.com/anthropics/anthropic-sdk-python
 
 # 移除仓库订阅
-python main.py remove microsoft/vscode
-```
+>>> remove microsoft/vscode
 
-### 5. 运行
-
-```bash
 # 立即执行一次（抓取数据 + 生成报告）
-python main.py run
+>>> run
 
-# 启动定时调度模式（按配置文件中的时间自动运行）
-python main.py schedule
+# 在后台启动定时调度模式
+>>> schedule
 ```
-
 生成的报告保存在 `reports/` 目录下，文件名格式为 `report_YYYYMMDD_HHMMSS.md`。
 
 ## 技术栈
@@ -112,10 +124,10 @@ python main.py schedule
 | 组件 | 技术 |
 |------|------|
 | 语言 | Python 3.10+ |
-| AI 报告 | [Anthropic Claude API](https://docs.anthropic.com/) |
+| AI 报告 | [DeepSeek API](https://platform.deepseek.com/)（通过 openai 兼容接口调用）|
 | GitHub 数据 | GitHub REST API v2022-11-28 |
 | 定时调度 | APScheduler |
-| 配置管理 | PyYAML + python-dotenv |
+| 配置管理 | PyYAML |
 
 ## 扩展开发
 
