@@ -13,9 +13,10 @@ class FileNotifier:
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         return f"{prefix}_{ts}.md"
 
-    def send(self, content: str, title: str = "GitHub Sentinel 报告") -> str:
+    def send(self, content: str, title: str = "GitHub Sentinel 报告", repo_slug: str = "") -> str:
         """将报告内容写入 Markdown 文件，返回文件路径"""
-        filename = self._report_filename()
+        prefix = f"report_{repo_slug}" if repo_slug else "report"
+        filename = self._report_filename(prefix)
         file_path = self.output_dir / filename
 
         header = f"# {title}\n\n生成时间：{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n---\n\n"

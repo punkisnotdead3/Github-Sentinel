@@ -71,9 +71,13 @@ def run_once(config: dict):
         return
 
     print("\n[AI] 正在生成摘要报告...")
-    digest = reporter.generate_digest(all_updates)
-    notifier.send(digest)
-    print("[完成] 报告生成成功！")
+    for updates in all_updates:
+        label = updates.get("label", f"{updates['owner']}/{updates['repo']}")
+        repo_slug = f"{updates['owner']}_{updates['repo']}"
+        print(f"  → 正在为 {label} 生成摘要报告...")
+        report = reporter.generate_report(updates)
+        notifier.send(report, title=f"{label} 报告", repo_slug=repo_slug)
+    print("[完成] 所有报告生成成功！")
 
 
 def start_schedule(config: dict):

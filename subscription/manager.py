@@ -27,7 +27,7 @@ class SubscriptionManager:
     def add_subscription(self, owner: str, repo: str, label: str = "", track: List[str] = None):
         """添加仓库订阅"""
         if track is None:
-            track = ["releases", "issues", "pull_requests", "commits"]
+            track = ["releases", "issues", "pull_requests"]
 
         # 检查是否已存在
         for sub in self._data["subscriptions"]:
