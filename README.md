@@ -1,4 +1,4 @@
-# GitHub Sentinel v0.0.3
+# GitHub Sentinel v0.0.4
 
 GitHub Sentinel 是一款开源的 AI Agent 工具，专为开发者和项目管理人员设计。它能够定期（每日/每周）自动获取并汇总订阅的 GitHub 仓库最新动态，通过 DeepSeek AI 生成结构化的中文摘要报告，帮助团队高效跟踪项目进展。
 
@@ -9,11 +9,13 @@ GitHub Sentinel 是一款开源的 AI Agent 工具，专为开发者和项目管
 - **报告生成**：调用 DeepSeek AI 对原始数据进行智能摘要，输出 Markdown 格式报告
 - **通知系统**：将报告保存为本地文件，支持扩展为邮件/Webhook 推送
 - **定时调度**：支持每日或每周定时自动执行
+- **Web UI**：基于 Gradio 的可视化界面，支持订阅管理、手动触发、历史报告浏览和调度控制
 
 ## 项目结构
 
 ```
 Github-Sentinel/
+├── app.py                     # Gradio Web UI 入口
 ├── main.py                    # 交互式 REPL 入口
 ├── requirements.txt           # Python 依赖
 ├── .gitignore
@@ -77,7 +79,20 @@ report:
   output_dir: "reports"      # 报告输出目录
 ```
 
-### 4. 启动交互式控制台
+### 4. 启动 Web UI（推荐）
+
+```bash
+python app.py
+```
+
+浏览器会自动打开 `http://localhost:7860`，提供 4 个功能页面：
+
+- **订阅管理**：添加/移除仓库，查看当前订阅列表
+- **立即运行**：点击按钮触发抓取，实时查看进度日志和 AI 生成报告
+- **历史报告**：浏览和查看已生成的历史报告文件
+- **定时调度**：启动/停止后台定时任务
+
+### 5. 启动交互式控制台（命令行）
 
 ```bash
 python main.py
@@ -124,6 +139,7 @@ python main.py
 | 组件 | 技术 |
 |------|------|
 | 语言 | Python 3.10+ |
+| Web UI | Gradio |
 | AI 报告 | [DeepSeek API](https://platform.deepseek.com/)（通过 openai 兼容接口调用）|
 | GitHub 数据 | GitHub REST API v2022-11-28 |
 | 定时调度 | APScheduler |
