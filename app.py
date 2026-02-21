@@ -15,7 +15,7 @@ import gradio as gr
 from config import load_config
 from subscription import SubscriptionManager
 from github_client import GitHubClient
-from llm import LLMReporter
+from llm import LLMReporter, list_ollama_models
 from notifier import FileNotifier
 from scheduler import SentinelScheduler
 
@@ -68,14 +68,31 @@ def parse_repo_arg(arg: str):
     return None
 
 
-def _build_components():
+def _build_components(provider: str = None, model: str = None, ollama_base_url: str = None):
     sub_manager = SubscriptionManager(config["subscriptions_file"])
     gh_client = GitHubClient(config["github"]["token"])
-    reporter = LLMReporter(
-        api_key=config["llm"]["api_key"],
-        model=config["llm"]["model"],
-        max_tokens=config["llm"]["max_tokens"],
-    )
+    llm_cfg = config["llm"]
+
+    actual_provider = provider or llm_cfg.get("provider", "deepseek")
+
+    if actual_provider == "ollama":
+        actual_model = model or llm_cfg.get("ollama_model", "llama3.2")
+        actual_base_url = ollama_base_url or llm_cfg.get("ollama_base_url", "http://localhost:11434")
+        reporter = LLMReporter(
+            provider="ollama",
+            model=actual_model,
+            max_tokens=llm_cfg["max_tokens"],
+            base_url=actual_base_url,
+        )
+    else:  # deepseek
+        actual_model = model or llm_cfg.get("model", "deepseek-chat")
+        reporter = LLMReporter(
+            provider="deepseek",
+            api_key=llm_cfg["api_key"],
+            model=actual_model,
+            max_tokens=llm_cfg["max_tokens"],
+        )
+
     notifier = FileNotifier(config["report"]["output_dir"])
     return sub_manager, gh_client, reporter, notifier
 
@@ -168,7 +185,7 @@ def remove_subscription(repo_str: str):
 # Tab 2: 立即运行（流式生成器）
 # --------------------------------------------------------------------------- #
 
-def run_and_stream(selected_repo: str):
+def run_and_stream(selected_repo: str, provider: str, model: str, ollama_base_url: str):
     """
     Generator: yields (log_text, report_markdown, download_file).
     download_file 在最后一次 yield 时才会设置为实际路径。
@@ -176,7 +193,7 @@ def run_and_stream(selected_repo: str):
     log_lines = []
     combined_report = ""
 
-    sub_manager, gh_client, reporter, notifier = _build_components()
+    sub_manager, gh_client, reporter, notifier = _build_components(provider, model, ollama_base_url)
     all_subs = sub_manager.list_subscriptions()
 
     # 根据选择过滤仓库
@@ -345,6 +362,38 @@ def stop_scheduler():
 
 
 # --------------------------------------------------------------------------- #
+# 模型选择辅助函数
+# --------------------------------------------------------------------------- #
+
+_DEEPSEEK_MODELS = ["deepseek-chat", "deepseek-reasoner"]
+
+
+def _get_default_provider() -> str:
+    return config["llm"].get("provider", "deepseek")
+
+
+def _get_default_model(provider: str) -> str:
+    if provider == "ollama":
+        return config["llm"].get("ollama_model", "llama3.2")
+    return config["llm"].get("model", "deepseek-chat")
+
+
+def _get_default_ollama_url() -> str:
+    return config["llm"].get("ollama_base_url", "http://localhost:11434")
+
+
+def refresh_model_list(provider: str, ollama_base_url: str):
+    """根据所选 provider 更新模型下拉框"""
+    if provider == "ollama":
+        models = list_ollama_models(ollama_base_url)
+        if models:
+            return gr.update(choices=models, value=models[0])
+        return gr.update(choices=[], value="", placeholder="未检测到模型，请确认 Ollama 已启动")
+    else:
+        return gr.update(choices=_DEEPSEEK_MODELS, value="deepseek-chat")
+
+
+# --------------------------------------------------------------------------- #
 # Gradio UI
 # --------------------------------------------------------------------------- #
 
@@ -401,6 +450,34 @@ with gr.Blocks(title="GitHub Sentinel", theme=gr.themes.Soft()) as demo:
                 )
                 refresh_run_btn = gr.Button("刷新列表", scale=1)
 
+            with gr.Row():
+                _init_provider = _get_default_provider()
+                provider_selector = gr.Dropdown(
+                    label="模型提供者",
+                    choices=["deepseek", "ollama"],
+                    value=_init_provider,
+                    scale=2,
+                )
+                _init_models = (
+                    _DEEPSEEK_MODELS if _init_provider == "deepseek"
+                    else list_ollama_models(_get_default_ollama_url())
+                )
+                _init_model = _get_default_model(_init_provider)
+                model_selector = gr.Dropdown(
+                    label="模型",
+                    choices=_init_models or [_init_model],
+                    value=_init_model,
+                    allow_custom_value=True,
+                    scale=3,
+                )
+                ollama_url_input = gr.Textbox(
+                    label="Ollama 地址",
+                    value=_get_default_ollama_url(),
+                    placeholder="http://localhost:11434",
+                    scale=2,
+                )
+                refresh_model_btn = gr.Button("刷新模型列表", scale=1)
+
             run_btn = gr.Button("立即运行", variant="primary", size="lg")
             run_log = gr.Textbox(
                 label="运行日志",
@@ -415,9 +492,19 @@ with gr.Blocks(title="GitHub Sentinel", theme=gr.themes.Soft()) as demo:
                 fn=_refresh_repo_dropdown,
                 outputs=[repo_selector],
             )
+            provider_selector.change(
+                fn=refresh_model_list,
+                inputs=[provider_selector, ollama_url_input],
+                outputs=[model_selector],
+            )
+            refresh_model_btn.click(
+                fn=refresh_model_list,
+                inputs=[provider_selector, ollama_url_input],
+                outputs=[model_selector],
+            )
             run_btn.click(
                 fn=run_and_stream,
-                inputs=[repo_selector],
+                inputs=[repo_selector, provider_selector, model_selector, ollama_url_input],
                 outputs=[run_log, run_report, run_download],
             )
 

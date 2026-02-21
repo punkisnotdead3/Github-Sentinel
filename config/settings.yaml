@@ -2,9 +2,11 @@ github:
   token: ""  # 在 .env 中设置 GITHUB_TOKEN
 
 llm:
-  provider: "deepseek"
-  model: "deepseek-chat"
+  provider: "deepseek"       # "deepseek" 或 "ollama"
+  model: "deepseek-chat"     # DeepSeek 默认模型
   max_tokens: 4096
+  ollama_base_url: "http://localhost:11434"  # Ollama 服务地址
+  ollama_model: "llama3.2"                   # Ollama 默认模型
 
 scheduler:
   interval: "daily"   # daily 或 weekly

@@ -16,6 +16,22 @@ SYSTEM_PROMPT = """你是一位专业的 GitHub 项目分析师。
 5. 在报告末尾给出一句话的整体评价
 """
 
+_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+_OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434"
+
+
+def list_ollama_models(base_url: str = _OLLAMA_DEFAULT_BASE_URL) -> List[str]:
+    """查询 Ollama 本地可用模型列表，返回模型名称列表。失败时返回空列表。"""
+    import requests
+    try:
+        resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=5)
+        resp.raise_for_status()
+        models = resp.json().get("models", [])
+        return [m["name"] for m in models]
+    except Exception as e:
+        logger.warning("获取 Ollama 模型列表失败: %s", e)
+        return []
+
 
 def _build_user_prompt(updates: Dict) -> str:
     owner = updates["owner"]
@@ -66,15 +82,31 @@ def _build_user_prompt(updates: Dict) -> str:
 
 
 class LLMReporter:
-    """使用 DeepSeek API 生成仓库更新摘要报告"""
+    """生成仓库更新摘要报告，支持 DeepSeek 和本地 Ollama 模型"""
 
-    def __init__(self, api_key: str, model: str = "deepseek-chat", max_tokens: int = 4096):
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com",
-        )
+    def __init__(
+        self,
+        model: str = "deepseek-chat",
+        max_tokens: int = 4096,
+        provider: str = "deepseek",
+        api_key: str = "",
+        base_url: str = "",
+    ):
         self.model = model
         self.max_tokens = max_tokens
+        self.provider = provider
+
+        if provider == "ollama":
+            actual_base_url = (base_url or _OLLAMA_DEFAULT_BASE_URL).rstrip("/")
+            self.client = OpenAI(
+                api_key="ollama",
+                base_url=f"{actual_base_url}/v1",
+            )
+        else:  # deepseek
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=_DEEPSEEK_BASE_URL,
+            )
 
     def generate_report(self, updates: Dict) -> str:
         """为单个仓库的更新生成 AI 摘要"""
@@ -102,13 +134,16 @@ class LLMReporter:
         )
 
         usage = response.usage
-        logger.info(
-            "LLM 调用完成 | 仓库: %s | prompt_tokens: %s | completion_tokens: %s | total_tokens: %s",
-            label,
-            usage.prompt_tokens,
-            usage.completion_tokens,
-            usage.total_tokens,
-        )
+        if usage:
+            logger.info(
+                "LLM 调用完成 | 仓库: %s | prompt_tokens: %s | completion_tokens: %s | total_tokens: %s",
+                label,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                usage.total_tokens,
+            )
+        else:
+            logger.info("LLM 调用完成 | 仓库: %s", label)
 
         return response.choices[0].message.content
 

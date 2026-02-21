@@ -19,8 +19,12 @@ def load_config(config_path: str = None) -> dict:
 
     if not github_token:
         raise EnvironmentError("环境变量 GITHUB_TOKEN 未设置")
-    if not deepseek_api_key:
-        raise EnvironmentError("环境变量 DEEPSEEK_API_KEY 未设置")
+
+    provider = config.get("llm", {}).get("provider", "deepseek")
+    if provider == "deepseek" and not deepseek_api_key:
+        raise EnvironmentError(
+            "环境变量 DEEPSEEK_API_KEY 未设置（当 provider 为 deepseek 时必须设置）"
+        )
 
     config.setdefault("github", {})["token"] = github_token
     config.setdefault("llm", {})["api_key"] = deepseek_api_key
